@@ -1,10 +1,23 @@
+// last update in Aug/2020
 // this is the script that blocked the trials by feedback: Visual only, haptic only or visual + haptic
-// spring19-jovan-pictureGraspStereopsis.cpp : Defines the entry point for the console application.
-//
+
+// To use the script, we need to change the blkOrder where we can set the block order and the task
+// 0: visual only task; 1: haptic only task; 2: visual+haptic
+// Dont forget to change the totalBlks so that it's consistent with the number in the blockOrder
+// Also we need to check the repetitions and set it to be consistent with the parameter files
+
+
+
 // stdafx.h : include file for standard system include files,
 // or project specific include files that are used frequently, but
+
 // are changed infrequently
 //
+
+// 1/24/2021 visual stimuli move with haptic
+// 1/24/2021 put tape on the stimuli (too cold now)
+// potentially have y offset for each trials
+// fail safe reach before 'grasp'
 
 #pragma once
 
@@ -137,9 +150,9 @@ int objMarkers[9] = { obj0, obj1, obj2, obj3, obj4, obj5, obj6, obj7, obj8};
 int objId = 12;
 double target_angle = 0.0;
 double objSizes[9] = { 55.0, 56.0, 57.0, 59.0, 51.0, 54.0, 48.0, 53.0, 62.0 };
-double x_shft = -5.5;
-double y_shift[9] = { -5.2, -2.8, -4.1, -5.9, -6.8, -5, -5.8, -6.8, -4.2 };
-double z_shft = -15;
+double x_shft = -6;
+double y_shift[9] = { 2.7, 6, 4.6, 3.1, 4, 6, 5.9, 4.2, 3.6 };
+double z_shft = 9;
 double objStepperPosns[9] = { 0, 40, 80, 120, 160, -160, -120, -80, -40 };
 
 Vector3d moveTo(50, 0, -500);
@@ -170,15 +183,16 @@ BalanceFactor<double> trial;
 bool training = true;
 bool screenBack = false; //has the screen been placed at projection distance
 bool finished = false;
-int repetitions = 2;
+int repetitions = 4;
 int trialNumBlk = 0;
 double ElapsedTime;
 double presentationTime;
 int timer_started;
 double time_checkpoint;
 int blkNum = 0;
-int blkOrder[2] = {0, 2}; // r8 {0,2} r9 {2, 1} r10 {2,0} r11 {1, 2} r12 {0,2}...
-int totalBlks = 2;
+int blkOrder[1] = {2};//{0, 1, 2, 0, 1, 2, 0, 1, 2}; // if changed, change the totalBlks too! 
+// r8 {0,2} r9 {2, 1} r10 {2,0} r11 {1, 2} r12 {0,2}...
+int totalBlks = 1;
 int trialNumber = 1;
 int totaltrialNum = 100;
 double display_distance;
@@ -519,7 +533,7 @@ void drawGLScene()
 	glDrawBuffer(GL_BACK_LEFT);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glClearColor(0.0,0.0,0.0,1.0);
-	cam.setEye(eyeLeft);
+	cam.setEye(eyeRight);
 	drawStimulus();
 	drawInfo();
 
@@ -527,7 +541,7 @@ void drawGLScene()
 	glDrawBuffer(GL_BACK_RIGHT);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glClearColor(0.0,0.0,0.0,1.0);
-	cam.setEye(eyeRight);
+	cam.setEye(eyeLeft);
 	drawStimulus();
 	drawInfo();
 
@@ -575,7 +589,7 @@ void drawInfo(){
 
 		text.enterTextInputMode();
 		glColor3fv(glWhite);
-		text.draw("break time. Press A to continue...");
+		text.draw("break time. Press confirm to continue...");
 		text.leaveTextInputMode();
 		glEnable(GL_COLOR_MATERIAL);
 		glEnable(GL_BLEND);
@@ -638,7 +652,7 @@ void drawInfo(){
 			text.draw("Marker " + stringify<int>(13) + stringify< Eigen::Matrix<double, 1, 3> >(markers[13].p.transpose()) + " [mm]");
 			text.draw("Marker " + stringify<int>(14) + stringify< Eigen::Matrix<double, 1, 3> >(markers[14].p.transpose()) + " [mm]");
 			text.draw("Marker " + stringify<int>(16) + stringify< Eigen::Matrix<double, 1, 3> >(markers[16].p.transpose()) + " [mm]");
-
+			
 			// THUMB //////
 			glColor3fv(glWhite);
 			text.draw(" ");
@@ -709,8 +723,10 @@ void drawInfo(){
         text.draw("# Distance to Ojbect: " + stringify<double>(distanceGripCenterToObject));
 		text.draw("# Center Markers: "+ stringify< Eigen::Matrix<double, 1, 3> >(markers[12].p.transpose()) + " [mm]");		
 		text.draw("# trial: " +stringify<int>(trialNumber));
-		text.draw("# time: " +stringify<int>(ElapsedTime));
-		//text.draw("# stage:" + stringify<int>(currentStage));
+		text.draw("# visual height (comparison): " + stringify<double>(comparison_height));
+		text.draw("# haptic height (comparison): " + stringify<double>(haptic_height_c));
+		
+		text.draw("# stage:" + stringify<int>(currentStage));
 		//text.draw("# task:" + stringify<int>(task));
 		//text.draw("# noise level: " + stringify<double>(trial_noise));
 		/*
@@ -723,9 +739,7 @@ void drawInfo(){
 		text.draw("# y_dist: " + stringify<double>(y_dist));
 		text.draw("# z_dist: " + stringify<double>(z_dist));
 		text.draw("--------------------");
-        text.draw("# grip X: " + stringify<double>(grip_Origin_X));
-		text.draw("# grip Y: " + stringify<double>(grip_Origin_Y));
-		text.draw("# grip Z: " + stringify<double>(grip_Origin_Z));		//text.draw("# visual height (standard): " + stringify<double>(standard_height));
+		//text.draw("# visual height (standard): " + stringify<double>(standard_height));
 		*/
 		//text.draw("# haptic height (standard): " + stringify<double>(haptic_height_s));
 		//text.draw("# visual height (comparison): " + stringify<double>(comparison_height));
@@ -782,13 +796,13 @@ void online_fingers()
 			fingersOccluded = 0;
 		}
 
-		double indXNow = ind.x();
-		double indYNow = ind.y();
-		double indZNow = ind.z();
+		double indXNow = (ind.x() + indJoint.x()) / 2;
+		double indYNow = (ind.y() + indJoint.y()) / 2;
+		double indZNow = (ind.z() + indJoint.z()) / 2;
 
-		double thmXNow = thm.x();
-		double thmYNow = thm.y();
-		double thmZNow = thm.z();
+		double thmXNow = (thm.x() + thmJoint.x()) / 2;
+		double thmYNow = (thm.y() + thmJoint.y()) / 2;
+		double thmZNow = (thm.z() + thmJoint.z()) / 2;
 
 		grip_Origin_X = (indXNow + thmXNow) / 2;
 		grip_Origin_Y = (indYNow + thmYNow) / 2;
@@ -807,7 +821,7 @@ void online_fingers()
 		// find distance from grip center to object center
 		x_dist = abs(grip_Origin_X - targetOriginX);
 		y_dist = abs(grip_Origin_Y - targetOriginY);
-		z_dist = abs(grip_Origin_Z - targetOriginZ);
+		z_dist = abs(grip_Origin_Z - (targetOriginZ - 12)); //targetOrigin is at the front surface, the 8 is the offset of the object center
 		oldDistanceGripCenterToObject = distanceGripCenterToObject;
 		distanceGripCenterToObject = sqrt(pow(x_dist,2) + pow(y_dist,2) + pow(z_dist,2));
 		//if (PositionSet) {
@@ -866,12 +880,12 @@ std::vector<Vector3d> buildRandomDots(double stimulus_height)
 	//double visual_angle = tan(DEG2RAD*visual_angle/2) * (abs(display_distance));
 	double visual_angle_width = 2 * atan(background_width/2/(abs(display_distance - 30))) / DEG2RAD;
 	double visual_angle_height = 2 * atan(background_height/2/(abs(display_distance - 30))) / DEG2RAD;
-	int dot_num = visual_angle_width * visual_angle_height * 9;
+	int dot_num = visual_angle_width * visual_angle_height * 9 / 2;
 	//stimulus_height = 55;
 	for (int dots_placed = 0; dots_placed < dot_num; dots_placed++)
 	{
 		double x_axis = rand() % background_width - background_width/2;
-		double y_axis = rand() % background_height - background_height/2;
+		double y_axis = rand() % int(stimulus_height) - stimulus_height/2;
 		double cur_noise = 0;
 		if (trial_noise != 0)
 			cur_noise = rand() % trial_noise / 100.;
@@ -937,7 +951,7 @@ void drawRandomDots(std::vector<Vector3d> dot_container)
 	
 	glLoadIdentity();	
 	//glTranslated(targetOriginX,targetOriginY,0);//targetOriginZ - 30);
-	glTranslated(targetOriginX,targetOriginY,targetOriginZ - 50);//;
+	glTranslated(targetOriginX,targetOriginY,targetOriginZ - 30);//;
 	//glRotated(5,0.,1.,0.);
 
 
@@ -1054,9 +1068,11 @@ void drawStimulus()
 			drawRandomDots(container[0]);
 			drawPanels();*/
 
-	if(task == 0){
+	/*if(task == 0){
 		//Time control for the experiment
-		if (ElapsedTime >= trial_start && ElapsedTime  <= pres_time + trial_start){
+		if (ElapsedTime < trial_start ) {
+			drawCross();
+		} else if (ElapsedTime >= trial_start && ElapsedTime  <= pres_time + trial_start){
 			if (currentStage == first_grasp) {
 				beepOk(4);
 				currentStage = first_visual;
@@ -1064,6 +1080,8 @@ void drawStimulus()
 			drawRandomDots(container[0]);
 			drawPanels();			
 			
+		} else if (ElapsedTime > trial_start + pres_time  &&  ElapsedTime < trial_start + pres_time + inter_stimulus) {
+			drawCross();
 		} else if (ElapsedTime >= trial_start + pres_time + inter_stimulus && ElapsedTime <= trial_start + pres_time * 2 + inter_stimulus){
 			if (currentStage == first_visual) {
 				beepOk(4);
@@ -1179,7 +1197,17 @@ void drawStimulus()
 			}
 		
 		}
+	}*/
+	if (currentStage != make_responce && fingersCalibrated){
+		targetOriginY = y_shift[comparison_objId];
+		presentHapticTarget(comparison_objId);
+		currentStage = make_responce;
 	}
+	drawFingers(0);
+	//targetOriginY = y_shift[comparison_objId];
+	drawRandomDots(container[1]);
+	drawPanels();
+	currentStage = make_responce;
 }
 
 void stepperRotate(double destinationLength){
@@ -1209,7 +1237,7 @@ void initTrial()
 {   
 	currentStage = first_grasp;
 	timer_started = 0;
-	currentStage = first_grasp;
+
 
 	//stepperRotate(55);
 
@@ -1319,20 +1347,12 @@ void initTrial()
 
 	//randomize the conditions
 	
-	if(rand() % 100 > 50) {
 		stdFirst = true;
 		container[0] = buildRandomDots(standard_height);
 		container[1] = buildRandomDots(comparison_height);
 		hapticIDs[0] = standard_objId;
 		hapticIDs[1] = comparison_objId;
 
-	} else {
-		stdFirst = false;
-		container[1] = buildRandomDots(standard_height);
-		container[0] = buildRandomDots(comparison_height);
-		hapticIDs[1] = standard_objId;
-		hapticIDs[0] = comparison_objId;
-	}
 
 	//container[0] = buildRandomDots(standard_height);
 
@@ -1342,6 +1362,7 @@ void initTrial()
 		beepOk(99);
 	}
 
+	currentStage = first_grasp;
 	trial_time.start();
 	presentation_timer.start(); presentation_timer.stop(); 
 	time_checkpoint = 10000;
@@ -1469,18 +1490,21 @@ void initBlock(){
 		case 0:
 			task = 0;
 			trial.init(parameters_V);
-			totaltrialNum = 4 * 8 * repetitions; // 4 noise levesls, 8 objects
+			totaltrialNum = 1 * 6 * repetitions; // just for compact experiment
+			//totaltrialNum = 4 * 8 * repetitions; // 4 noise levesls, 8 objects
 			break;
 
 		case 1:
 			task = 1;
 			trial.init(parameters_H);
-			totaltrialNum = 8 * repetitions; // 1 noise level, 8 objects
+			totaltrialNum = 1 * 6 * repetitions; // just for compact experiment
+			//totaltrialNum = 8 * repetitions; // 1 noise level, 8 objects
 			break;
 
 		case 2:
 			trial.init(parameters_VH);
-			totaltrialNum = 5 * 4 * 8 ; // 5 tasks, 4 noise levels, 8 objects
+			totaltrialNum = 5 * 1 * 6 * repetitions ; // just for compact experiment
+			//totaltrialNum = 5 * 4 * 8 ; // 5 tasks, 4 noise levels, 8 objects
 			break;
 
 	}
@@ -1512,16 +1536,19 @@ void handleKeypress(unsigned char key, int x, int y)
 			break;
 		case 'm':
 			{
-				interoculardistance += 0.5;
-				headEyeCoords.setInterOcularDistance(interoculardistance);
+
+			targetOriginY = targetOriginY + 0.5;
+			//drawRandomDots(container[1]);
+		
 			}
 			break;
 		case 'n':
 			{
-				interoculardistance -= 0.5;
-				headEyeCoords.setInterOcularDistance(interoculardistance);
+				targetOriginY = targetOriginY - 0.5;
+				//drawRandomDots(container[1]);
 			}
 			break;
+
 		case 'Q':
 		case 'q':
 		case 27:	//corrisponde al tasto ESC
@@ -1559,7 +1586,7 @@ void handleKeypress(unsigned char key, int x, int y)
 						respond_stdTaller = true;
 					else
 						respond_stdTaller = false;
-					if(trialNumber % 16 == 0 ){
+					if(trialNumber % 8 == 0 ){
 						
 						presentation_timer.stop();
 						currentStage = showProgBar;
@@ -1591,7 +1618,7 @@ void handleKeypress(unsigned char key, int x, int y)
 					else
 						respond_stdTaller = true;
 
-					if(trialNumber % 16 == 0 ){
+					if(trialNumber % 8 == 0 ){
 						
 						presentation_timer.stop();
 						currentStage = showProgBar;
@@ -1605,8 +1632,8 @@ void handleKeypress(unsigned char key, int x, int y)
 			}
 			break;
 
-		case 'a':
-		case 'A':
+		case '+':
+
 			{
 				if(blkNum > 0 && currentStage == breakTime){
 
@@ -1709,6 +1736,8 @@ void handleKeypress(unsigned char key, int x, int y)
 				}
 			}
 			break;
+
+
 }
 }
 /***** SOUNDS *****/
